@@ -46,6 +46,13 @@ export class AuthController {
     return result.user;
   }
 
+  @Post('signout')
+  @HttpCode(HttpStatus.OK)
+  async signOut(@Res({ passthrough: true }) res: Response) {
+    this.clearAuthCookie(res);
+    return { message: 'Signed out' };
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: JwtPayload) {
@@ -62,5 +69,9 @@ export class AuthController {
       maxAge: maxAgeMs,
       path: '/',
     });
+  }
+
+  private clearAuthCookie(res: Response) {
+    res.clearCookie('access_token', { path: '/' });
   }
 }

@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Statcat Club Manager",
   description: "Club, athletes, teams, and events management",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
