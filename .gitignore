@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Build / dist
+dist/
+.next/
+out/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+backend/.env
+backend/cookies*.txt
+
+# Misc
+.DS_Store

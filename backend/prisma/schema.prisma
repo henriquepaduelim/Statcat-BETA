@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  COACH
+  ATHLETE
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(ATHLETE)
+  status       UserStatus @default(PENDING)
+  firstName    String?
+  lastName     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  athlete      Athlete?
+  teamsCoached TeamCoach[]
+  eventsCreated Event[]          @relation("EventsCreated")
+  invitations   EventInvitation[] @relation("UserInvitations")
+}
+
+enum AthleteStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum TeamStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DominantFoot {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+enum EventType {
+  TRAINING
+  MATCH
+  MEETING
+  TEST_SESSION
+  OTHER
+}
+
+enum RsvpStatus {
+  YES
+  NO
+  MAYBE
+  PENDING
+}
+
+enum AttendanceStatus {
+  UNKNOWN
+  PRESENT
+  ABSENT
+  LATE
+}
+
+model Athlete {
+  id           String         @id @default(cuid())
+  userId       String         @unique
+  user         User           @relation(fields: [userId], references: [id])
+  dateOfBirth  DateTime?
+  position     String?
+  dominantFoot DominantFoot?
+  status       AthleteStatus  @default(PENDING)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  teams        TeamAthlete[]
+}
+
+model Team {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  ageGroup  String?
+  status    TeamStatus   @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  athletes  TeamAthlete[]
+  coaches   TeamCoach[]
+  events    Event[]
+}
+
+model TeamAthlete {
+  teamId    String
+  athleteId String
+  assignedAt DateTime @default(now())
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, athleteId])
+  @@index([athleteId])
+}
+
+model TeamCoach {
+  teamId String
+  coachId String
+  assignedAt DateTime @default(now())
+
+  team  Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  coach User @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, coachId])
+  @@index([coachId])
+}
+
+model Event {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  type        EventType
+  location    String?
+  startTime   DateTime
+  endTime     DateTime?
+  teamId      String?
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  team         Team?        @relation(fields: [teamId], references: [id])
+  createdBy    User         @relation("EventsCreated", fields: [createdById], references: [id])
+  invitations  EventInvitation[] @relation("EventInvitations")
+
+  @@index([teamId])
+  @@index([startTime])
+}
+
+model EventInvitation {
+  id               String           @id @default(cuid())
+  eventId          String
+  userId           String
+  rsvpStatus       RsvpStatus       @default(PENDING)
+  attendanceStatus AttendanceStatus @default(UNKNOWN)
+  invitedAt        DateTime         @default(now())
+  respondedAt      DateTime?
+
+  event Event @relation("EventInvitations", fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation("UserInvitations", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
