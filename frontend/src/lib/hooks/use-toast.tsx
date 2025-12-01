@@ -21,16 +21,16 @@ export function useToast() {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`rounded-md border px-3 py-2 text-sm shadow-sm ${
+            className={`rounded-lg border px-4 py-3 text-sm shadow-sm shadow-[rgba(15,23,42,0.08)] backdrop-blur ${
               toast.tone === "error"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-gray-200 bg-white text-gray-800"
+                ? "border-[var(--danger-strong)] bg-[var(--danger-soft)] text-[var(--danger-strong)]"
+                : "border-[var(--border-subtle)] bg-[var(--surface-base)] text-[var(--text-primary)]"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
               <span>{toast.message}</span>
               <button
-                className="text-xs text-gray-500 hover:text-gray-800"
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 onClick={() => remove(toast.id)}
               >
                 Dismiss

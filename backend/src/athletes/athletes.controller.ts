@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Query,
   Patch,
   Post,
   UseGuards,
@@ -16,6 +17,9 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { AthleteScopeGuard } from '../common/guards/athlete-scope.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
+import { ListAthletesDto } from './dto/list-athletes.dto';
+import { CurrentUser } from '../common/decorators/user.decorator';
+import { JwtPayload } from '../auth/types/jwt-payload';
 
 @Controller('athletes')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,8 +28,8 @@ export class AthletesController {
   constructor(private readonly athletesService: AthletesService) {}
 
   @Get()
-  findAll() {
-    return this.athletesService.findAll();
+  findAll(@Query() query: ListAthletesDto, @CurrentUser() user: JwtPayload) {
+    return this.athletesService.findAll(query, user);
   }
 
   @Get(':id')

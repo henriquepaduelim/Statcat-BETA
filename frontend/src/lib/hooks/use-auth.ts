@@ -14,5 +14,12 @@ export function useAuth() {
     queryKey: ["me"],
     queryFn: () => apiClient.get<MeResponse>("/auth/me"),
     staleTime: 60_000,
+    retry: (failureCount, error) => {
+      // Do not retry unauthorized to avoid loops
+      if (error instanceof Error && error.message.toLowerCase().includes("unauthorized")) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }

@@ -105,7 +105,7 @@ export class UsersService {
   }
 
   private toSafeUser(user: User): SafeUser {
-    const { passwordHash, ...safeUser } = user;
+    const { passwordHash: _passwordHash, ...safeUser } = user;
     return safeUser;
   }
 }

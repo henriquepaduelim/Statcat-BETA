@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
@@ -17,6 +18,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { CurrentUser } from '../common/decorators/user.decorator';
+import { ListEventsDto } from './dto/list-events.dto';
 
 @Controller('events')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,8 +26,11 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
-  async findAll(@CurrentUser() user: { sub: string; role: Role }) {
-    return this.eventsService.findAllForUser(user.sub, user.role);
+  async findAll(
+    @CurrentUser() user: { sub: string; role: Role },
+    @Query() query: ListEventsDto,
+  ) {
+    return this.eventsService.findAllForUser(user.sub, user.role, query);
   }
 
   @Get(':id')

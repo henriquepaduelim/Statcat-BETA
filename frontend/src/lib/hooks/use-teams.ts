@@ -10,6 +10,13 @@ export type Team = {
   status: string;
 };
 
+export type PaginatedTeams = {
+  items: Team[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type RosterResponse = {
   team: {
     id: string;
@@ -33,10 +40,35 @@ export type RosterResponse = {
   }>;
 };
 
-export function useTeams() {
+export type TeamsQueryParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+};
+
+export function useTeams(params: TeamsQueryParams = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params.search) searchParams.set("search", params.search);
+  if (params.status) searchParams.set("status", params.status);
+  const queryString = searchParams.toString();
+
   return useQuery({
-    queryKey: ["teams"],
-    queryFn: () => apiClient.get<Team[]>("/teams"),
+    queryKey: ["teams", params],
+    queryFn: () =>
+      apiClient.get<PaginatedTeams>(`/teams${queryString ? `?${queryString}` : ""}`),
+  });
+}
+
+export function useDeleteTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (teamId: string) => apiClient.del(`/teams/${teamId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["teams"] });
+    },
   });
 }
 

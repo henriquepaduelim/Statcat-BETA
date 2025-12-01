@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
@@ -18,16 +19,19 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { TeamScopeGuard } from '../common/guards/team-scope.guard';
+import { CurrentUser } from '../common/decorators/user.decorator';
+import { JwtPayload } from '../auth/types/jwt-payload';
+import { ListTeamsDto } from './dto/list-teams.dto';
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.STAFF)
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Get()
-  findAll() {
-    return this.teamsService.findAll();
+  @Roles(Role.ADMIN, Role.STAFF, Role.COACH, Role.ATHLETE)
+  findAll(@CurrentUser() user: JwtPayload, @Query() query: ListTeamsDto) {
+    return this.teamsService.findAllForUser(user.sub, user.role, query);
   }
 
   @Get(':id')
@@ -38,36 +42,43 @@ export class TeamsController {
   }
 
   @Post()
+  @Roles(Role.ADMIN, Role.STAFF)
   create(@Body() dto: CreateTeamDto) {
     return this.teamsService.create(dto);
   }
 
   @Patch(':id')
+  @Roles(Role.ADMIN, Role.STAFF)
   update(@Param('id') id: string, @Body() dto: UpdateTeamDto) {
     return this.teamsService.update(id, dto);
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN, Role.STAFF)
   remove(@Param('id') id: string) {
     return this.teamsService.remove(id);
   }
 
   @Post(':id/athletes')
+  @Roles(Role.ADMIN, Role.STAFF)
   addAthlete(@Param('id') teamId: string, @Body() dto: AssignAthleteDto) {
     return this.teamsService.addAthlete(teamId, dto.athleteId);
   }
 
   @Delete(':id/athletes/:athleteId')
+  @Roles(Role.ADMIN, Role.STAFF)
   removeAthlete(@Param('id') teamId: string, @Param('athleteId') athleteId: string) {
     return this.teamsService.removeAthlete(teamId, athleteId);
   }
 
   @Post(':id/coaches')
+  @Roles(Role.ADMIN, Role.STAFF)
   addCoach(@Param('id') teamId: string, @Body() dto: AssignCoachDto) {
     return this.teamsService.addCoach(teamId, dto.coachId);
   }
 
   @Delete(':id/coaches/:coachId')
+  @Roles(Role.ADMIN, Role.STAFF)
   removeCoach(@Param('id') teamId: string, @Param('coachId') coachId: string) {
     return this.teamsService.removeCoach(teamId, coachId);
   }

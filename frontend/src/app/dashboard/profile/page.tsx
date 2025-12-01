@@ -1,17 +1,19 @@
 "use client";
 
 import { useAuth } from "@/lib/hooks/use-auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function ProfilePage() {
   const auth = useAuth();
 
   if (auth.isLoading) {
-    return <p className="text-sm text-gray-700">Loading profile...</p>;
+    return <p className="text-sm text-[var(--text-muted)]">Loading profile...</p>;
   }
 
   if (auth.isError || !auth.data) {
     return (
-      <p className="text-sm text-red-600">
+      <p className="text-sm text-[var(--danger)]">
         Failed to load profile: {auth.error instanceof Error ? auth.error.message : "Error"}
       </p>
     );
@@ -19,27 +21,37 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">Profile</p>
-        <h2 className="text-2xl font-bold text-gray-900">My profile</h2>
-        <p className="text-sm text-gray-600">Your account details</p>
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          Profile
+        </p>
+        <h2 className="text-3xl font-bold leading-tight text-[var(--text-primary)]">My profile</h2>
+        <p className="text-sm text-[var(--text-muted)]">Your account details</p>
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <dl className="space-y-2 text-sm text-gray-800">
-          <div className="flex justify-between">
-            <dt className="text-gray-600">Email</dt>
-            <dd className="font-medium">{auth.data.email}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-gray-600">Role</dt>
-            <dd className="font-medium">{auth.data.role}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-gray-600">User ID</dt>
-            <dd className="font-mono text-xs">{auth.data.sub}</dd>
-          </div>
-        </dl>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Account</CardTitle>
+          <CardDescription>Identity and role information.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <dl className="space-y-3 text-sm text-[var(--text-secondary)]">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[var(--text-muted)]">Email</dt>
+              <dd className="font-medium text-[var(--text-primary)]">{auth.data.email}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[var(--text-muted)]">Role</dt>
+              <dd>
+                <Badge tone="accent">{auth.data.role}</Badge>
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[var(--text-muted)]">User ID</dt>
+              <dd className="font-mono text-xs text-[var(--text-primary)]">{auth.data.sub}</dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
     </div>
   );
 }

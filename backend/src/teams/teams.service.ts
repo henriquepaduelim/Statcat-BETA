@@ -7,7 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { Prisma } from '@prisma/client';
-import type { Team } from '@prisma/client';
+import type { Role, Team } from '@prisma/client';
+import { ListTeamsDto } from './dto/list-teams.dto';
 
 @Injectable()
 export class TeamsService {
@@ -30,10 +31,79 @@ export class TeamsService {
     }
   }
 
-  async findAll(): Promise<Team[]> {
-    return this.prisma.team.findMany({
-      orderBy: { createdAt: 'desc' },
+  async findAllForUser(userId: string, role: Role, query: ListTeamsDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const where: any = {};
+
+    if (query.status) {
+      where.status = query.status;
+    }
+    if (query.search) {
+      where.name = { contains: query.search, mode: 'insensitive' };
+    }
+
+    if (role === 'ADMIN' || role === 'STAFF') {
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.team.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.team.count({ where }),
+      ]);
+      return { items, total, page, pageSize };
+    }
+
+    if (role === 'COACH') {
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.team.findMany({
+          where: {
+            ...where,
+            coaches: { some: { coachId: userId } },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.team.count({
+          where: {
+            ...where,
+            coaches: { some: { coachId: userId } },
+          },
+        }),
+      ]);
+      return { items, total, page, pageSize };
+    }
+
+    // Athlete
+    const athlete = await this.prisma.athlete.findUnique({
+      where: { userId },
+      select: { id: true },
     });
+    if (!athlete) {
+      return { items: [], total: 0, page, pageSize };
+    }
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.team.findMany({
+        where: {
+          ...where,
+          athletes: { some: { athleteId: athlete.id } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.team.count({
+        where: {
+          ...where,
+          athletes: { some: { athleteId: athlete.id } },
+        },
+      }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   async findOne(id: string): Promise<Team> {
@@ -78,9 +148,16 @@ export class TeamsService {
   }
 
   async removeAthlete(teamId: string, athleteId: string): Promise<void> {
-    await this.prisma.teamAthlete.delete({
-      where: { teamId_athleteId: { teamId, athleteId } },
-    });
+    try {
+      await this.prisma.teamAthlete.delete({
+        where: { teamId_athleteId: { teamId, athleteId } },
+      });
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        throw new NotFoundException('Athlete not found on this team');
+      }
+      throw error;
+    }
   }
 
   async addCoach(teamId: string, coachId: string): Promise<void> {
@@ -93,9 +170,16 @@ export class TeamsService {
   }
 
   async removeCoach(teamId: string, coachId: string): Promise<void> {
-    await this.prisma.teamCoach.delete({
-      where: { teamId_coachId: { teamId, coachId } },
-    });
+    try {
+      await this.prisma.teamCoach.delete({
+        where: { teamId_coachId: { teamId, coachId } },
+      });
+    } catch (error) {
+      if (this.isNotFound(error)) {
+        throw new NotFoundException('Coach not found on this team');
+      }
+      throw error;
+    }
   }
 
   async roster(teamId: string) {
@@ -140,6 +224,13 @@ export class TeamsService {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
+    );
+  }
+
+  private isNotFound(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
     );
   }
 }

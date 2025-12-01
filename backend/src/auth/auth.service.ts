@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -63,6 +64,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new ForbiddenException('Account is not active');
+    }
+
     const token = await this.signToken(user);
     return { user: this.toSafeUser(user), token };
   }
@@ -86,7 +91,7 @@ export class AuthService {
   }
 
   private toSafeUser(user: User): Omit<User, 'passwordHash'> {
-    const { passwordHash, ...safeUser } = user;
+    const { passwordHash: _passwordHash, ...safeUser } = user;
     return safeUser;
   }
 }

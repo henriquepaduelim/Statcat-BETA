@@ -9,7 +9,8 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { RsvpDto } from './dto/rsvp.dto';
 import { Role } from '../common/enums/role.enum';
 import { RsvpStatus } from '../common/enums/rsvp-status.enum';
-import type { Prisma, Event, EventInvitation } from '@prisma/client';
+import type { Prisma, Event, EventInvitation, EventType } from '@prisma/client';
+import { ListEventsDto } from './dto/list-events.dto';
 
 @Injectable()
 export class EventsService {
@@ -45,24 +46,54 @@ export class EventsService {
     return event;
   }
 
-  async findAllForUser(userId: string, role: Role) {
+  async findAllForUser(userId: string, role: Role, query: ListEventsDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+
+    const baseWhere: Prisma.EventWhereInput = {};
+
+    if (query.search) {
+      baseWhere.title = { contains: query.search, mode: 'insensitive' };
+    }
+    if (query.type) {
+      baseWhere.type = query.type as EventType;
+    }
+    if (query.teamId) {
+      baseWhere.teamId = query.teamId;
+    }
+
     if (role === Role.ADMIN || role === Role.STAFF) {
-      return this.prisma.event.findMany({
-        orderBy: { startTime: 'asc' },
-      });
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.event.findMany({
+          where: baseWhere,
+          orderBy: { startTime: 'asc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.event.count({ where: baseWhere }),
+      ]);
+      return { items, total, page, pageSize };
     }
 
     if (role === Role.COACH) {
-      return this.prisma.event.findMany({
-        where: {
-          OR: [
-            { createdById: userId },
-            { invitations: { some: { userId } } },
-            { team: { coaches: { some: { coachId: userId } } } },
-          ],
-        },
-        orderBy: { startTime: 'asc' },
-      });
+      const scopedWhere: Prisma.EventWhereInput = {
+        ...baseWhere,
+        OR: [
+          { createdById: userId },
+          { invitations: { some: { userId } } },
+          { team: { coaches: { some: { coachId: userId } } } },
+        ],
+      };
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.event.findMany({
+          where: scopedWhere,
+          orderBy: { startTime: 'asc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.event.count({ where: scopedWhere }),
+      ]);
+      return { items, total, page, pageSize };
     }
 
     // Athlete
@@ -79,12 +110,21 @@ export class EventsService {
       });
     }
 
-    return this.prisma.event.findMany({
-      where: {
-        OR: orFilters,
-      },
-      orderBy: { startTime: 'asc' },
-    });
+    const scopedWhere: Prisma.EventWhereInput = {
+      ...baseWhere,
+      OR: orFilters,
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.event.findMany({
+        where: scopedWhere,
+        orderBy: { startTime: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.event.count({ where: scopedWhere }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   async findOneScoped(eventId: string, userId: string, role: Role) {
@@ -167,6 +207,14 @@ export class EventsService {
     actorId: string,
     role: Role,
   ): Promise<EventInvitation> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User to invite not found');
+    }
+
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: { invitations: true },

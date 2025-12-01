@@ -12,6 +12,13 @@ export type Event = {
   teamId?: string | null;
 };
 
+export type PaginatedEvents = {
+  items: Event[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type EventDetail = Event & {
   description?: string | null;
   location?: string | null;
@@ -23,10 +30,27 @@ export type EventDetail = Event & {
   }>;
 };
 
-export function useEvents() {
+export type EventsQueryParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  type?: string;
+  teamId?: string;
+};
+
+export function useEvents(params: EventsQueryParams = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params.search) searchParams.set("search", params.search);
+  if (params.type) searchParams.set("type", params.type);
+  if (params.teamId) searchParams.set("teamId", params.teamId);
+  const queryString = searchParams.toString();
+
   return useQuery({
-    queryKey: ["events"],
-    queryFn: () => apiClient.get<Event[]>("/events"),
+    queryKey: ["events", params],
+    queryFn: () =>
+      apiClient.get<PaginatedEvents>(`/events${queryString ? `?${queryString}` : ""}`),
   });
 }
 

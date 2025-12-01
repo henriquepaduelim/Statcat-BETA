@@ -6,6 +6,8 @@ import { UsersModule } from './users/users.module';
 import { AthletesModule } from './athletes/athletes.module';
 import { TeamsModule } from './teams/teams.module';
 import { EventsModule } from './events/events.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { PlayerProfileModule } from './player-profile/player-profile.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { EventsModule } from './events/events.module';
     AthletesModule,
     TeamsModule,
     EventsModule,
+    DashboardModule,
+    PlayerProfileModule,
   ],
 })
 export class AppModule {}
